@@ -52,7 +52,8 @@ local function Buffer(str, allowOverflows): Types.Buffer
 		local packsize = string.packsize(fmt)
 
 		local chunk = self:read(packsize, shift)
-		return string.unpack(fmt, chunk)
+		local n = string.unpack(fmt, chunk)
+		return n
 	end
 
 	return Stream
