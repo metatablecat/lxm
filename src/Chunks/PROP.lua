@@ -36,6 +36,13 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 	local sizeof = classref.Sizeof
 
 	local name = BasicTypes.String(buffer)
+	local optTypeIdCheck = string.byte(buffer:read(1, false)) == 0x1E
+	if optTypeIdCheck then
+		-- although its only be spotted for CFrame, i do believe 0x1E will be used for
+		-- other optional types in the future, this future proofs that case
+		buffer:seek(1)
+	end
+
 	local typeID = string.byte(buffer:read())
 
 	local properties = {}
@@ -154,15 +161,8 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 	-- elseif typeID == 0x0F then
 		-- Vector2int16?
 
-	elseif typeID == 0x10 or typeID == 0x11 or typeID == 0x1E then
-		--CFrame, Quaternion and OptCFrame
-		if typeID == 0x1E then
-			-- check for the cframe bit
-			local t = string.byte(buffer:read())
-			if t ~= 0x10 then
-				chunk:Error("OptionalCFrame has an invalid type flag.")
-			end
-		end
+	elseif typeID == 0x10 then
+		--CFrame
 		local matricies = table.create(sizeof)
 
 		for i = 1, sizeof do
@@ -176,28 +176,26 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 				local R1 = Vector3.fromNormalId(y)
 				local R2 =	R0:Cross(R1)
 
-				matricies[i] = {
-					0, 0, 0, 
-					R0.X, R0.Y, R0.Z, 
-					R1.X, R1.Y, R1.Z,
-					R2.X, R2.Y, R2.Z
-				}
-			elseif typeID == 0x11 then
-				local x, y, z, w =
+				matricies[i] = {R0, R1, R2}
+			else
+				local r00, r01, r02 = 
 					buffer:readNumber("<f"),
+					buffer:readNumber("<f"),
+					buffer:readNumber("<f")
+				local r10, r11, r12 = 
+					buffer:readNumber("<f"),
+					buffer:readNumber("<f"),
+					buffer:readNumber("<f")
+				local r20, r21, r22 = 
 					buffer:readNumber("<f"),
 					buffer:readNumber("<f"),
 					buffer:readNumber("<f")
 
-				local q = CFrame.new(0, 0, 0, x, y, z, w)
-				matricies[i] = {q:GetComponents()}
-			else
-				local out = table.create(12, 0)
-				for i = 4, 12 do
-					out[i] = buffer:readNumber("<f")
-				end
-
-				matricies[i] = out
+				matricies[i] = {
+					Vector3.new(r00, r10, r20),
+					Vector3.new(r01, r11, r21),
+					Vector3.new(r02, r12, r22)
+				}
 			end
 		end
 
@@ -208,31 +206,29 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 		for i = 1, sizeof do
 			local thisMatrix = matricies[i]
-			thisMatrix[1] = cfX[i]
-			thisMatrix[2] = cfY[i]
-			thisMatrix[3] = cfZ[i]
-
-			properties[i] = CFrame.new(
-				thisMatrix[1], thisMatrix[2], thisMatrix[3],
-				thisMatrix[4], thisMatrix[5], thisMatrix[6],
-				thisMatrix[7], thisMatrix[8], thisMatrix[9],
-				thisMatrix[10], thisMatrix[11], thisMatrix[12]
-			)
+			local pos = Vector3.new(cfX[i], cfY[i], cfZ[i])
+			properties[i] = CFrame.fromMatrix(pos, thisMatrix[1], thisMatrix[2], thisMatrix[3])
 		end
 
-		if typeID == 0x1E then
-			local bool = string.byte(buffer:read())
-			if bool ~= 0x02 then
-				chunk:Error("OptionalCFrame does not have correct following type")
-			end
+	elseif typeID == 0x11 then
+		-- Quaternion (i can be a little quicker here by handling it differently)
+		local quaternions = {}
+		for i = 1, sizeof do
+			quaternions[i] = {
+				x = buffer:readNumber("<f"),
+				y = buffer:readNumber("<f"),
+				z = buffer:readNumber("<f"),
+				w = buffer:readNumber("<f")
+			}
+		end
 
-			for i = 1, sizeof do
-				local archivable = buffer:read() ~= "\0"
+		local cfX = BasicTypes.RbxF32Array(buffer, sizeof)
+		local cfY = BasicTypes.RbxF32Array(buffer, sizeof)
+		local cfZ = BasicTypes.RbxF32Array(buffer, sizeof)
 
-				if not archivable then
-					properties[i] = CFrame.new()
-				end
-			end
+		for i = 1, sizeof do
+			local q = quaternions[i]
+			properties[i] = CFrame.new(cfX[i], cfY[i], cfZ[i], q.x, q.y, q.z, q.w)
 		end
 
 	elseif typeID == 0x12 then
@@ -367,6 +363,19 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 			BasicTypes.String(buffer) --CachedFaceId
 
 			properties[i] = Font.new(family, weight, style)
+		end
+	end
+
+	-- perform optional prop handle
+	if optTypeIdCheck then
+		buffer:read()
+
+		for i = 1, sizeof do
+			local archivable = buffer:read() ~= "\0"
+			if not archivable then
+				-- null the key (hopefully if OptCFrame returns, it allows null as a prop)
+				properties[i] = nil
+			end
 		end
 	end
 

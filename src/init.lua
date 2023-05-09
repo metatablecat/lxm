@@ -19,8 +19,6 @@ local ZSTD_HEADER = "\x28\xB5\x2F\xFD"
 local Buffer = require(script.Buffer)
 local Types = require(script.Types)
 local lz4 = require(script.lz4)
-local ObjectBuilder = require(script.ObjectBuilder)
-
 local Chunks = script.Chunks
 
 local VALID_CHUNK_IDENTIFIERS = {
