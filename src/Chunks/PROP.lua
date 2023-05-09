@@ -168,7 +168,7 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		for i = 1, sizeof do
 			local rawOrientation = string.byte(buffer:read())
 			if rawOrientation > 0 then
-				local orientID = (rawOrientation-1) % 36
+				local orientID = rawOrientation - 1
 				local x = GetEnumValFromNumber(Enum.NormalId, orientID / 6)
 				local y = GetEnumValFromNumber(Enum.NormalId, orientID % 6)
 				

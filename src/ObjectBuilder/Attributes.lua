@@ -116,7 +116,7 @@ return function(attribStream: string): {[string]: any}
 
 			local rotid = string.byte(buffer:read())
 			if rotid > 0 then
-				local orientID = (rotid-1) % 36
+				local orientID = rotid - 1
 				local rx = GetEnumValFromNumber(Enum.NormalId, orientID / 6)
 				local ry = GetEnumValFromNumber(Enum.NormalId, orientID % 6)
 				
