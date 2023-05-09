@@ -163,7 +163,77 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 				chunk:Error("OptionalCFrame has an invalid type flag.")
 			end
 		end
-		--TODO
+		local matricies = table.create(sizeof)
+
+		for i = 1, sizeof do
+			local rawOrientation = string.byte(buffer:read())
+			if rawOrientation > 0 then
+				local orientID = (rawOrientation-1) % 36
+				local x = GetEnumValFromNumber(Enum.NormalId, orientID / 6)
+				local y = GetEnumValFromNumber(Enum.NormalId, orientID % 6)
+				
+				local R0 = Vector3.fromNormalId(x)
+				local R1 = Vector3.fromNormalId(y)
+				local R2 =	R0:Cross(R1)
+
+				matricies[i] = {
+					0, 0, 0, 
+					R0.X, R0.Y, R0.Z, 
+					R1.X, R1.Y, R1.Z,
+					R2.X, R2.Y, R2.Z
+				}
+			elseif typeID == 0x11 then
+				local x, y, z, w =
+					buffer:readNumber("<f"),
+					buffer:readNumber("<f"),
+					buffer:readNumber("<f"),
+					buffer:readNumber("<f")
+
+				local q = CFrame.new(0, 0, 0, x, y, z, w)
+				matricies[i] = {q:GetComponents()}
+			else
+				local out = table.create(12, 0)
+				for i = 4, 12 do
+					out[i] = buffer:readNumber("<f")
+				end
+
+				matricies[i] = out
+			end
+		end
+
+		-- map interleaved position
+		local cfX = BasicTypes.RbxF32Array(buffer, sizeof)
+		local cfY = BasicTypes.RbxF32Array(buffer, sizeof)
+		local cfZ = BasicTypes.RbxF32Array(buffer, sizeof)
+
+		for i = 1, sizeof do
+			local thisMatrix = matricies[i]
+			thisMatrix[1] = cfX[i]
+			thisMatrix[2] = cfY[i]
+			thisMatrix[3] = cfZ[i]
+
+			properties[i] = CFrame.new(
+				thisMatrix[1], thisMatrix[2], thisMatrix[3],
+				thisMatrix[4], thisMatrix[5], thisMatrix[6],
+				thisMatrix[7], thisMatrix[8], thisMatrix[9],
+				thisMatrix[10], thisMatrix[11], thisMatrix[12]
+			)
+		end
+
+		if typeID == 0x1E then
+			local bool = string.byte(buffer:read())
+			if bool ~= 0x02 then
+				chunk:Error("OptionalCFrame does not have correct following type")
+			end
+
+			for i = 1, sizeof do
+				local archivable = buffer:read() ~= "\0"
+
+				if not archivable then
+					properties[i] = CFrame.new()
+				end
+			end
+		end
 
 	elseif typeID == 0x12 then
 		-- Enum
