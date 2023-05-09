@@ -117,6 +117,10 @@ local function rbxm(buffer: string): Types.Rbxm
 	rbxm.Metadata = {}
 	rbxm.Strings = {}
 
+	function rbxm:GetObjects()
+		print("Unimplemented")
+	end
+
 	local chunkInfo = {}
 	for k in VALID_CHUNK_IDENTIFIERS do
 		chunkInfo[k] = {}
@@ -140,7 +144,7 @@ local function rbxm(buffer: string): Types.Rbxm
 	procChunkType(chunkInfo, "INST", rbxm)
 	procChunkType(chunkInfo, "PROP", rbxm)
 	procChunkType(chunkInfo, "PRNT", rbxm)
-	
+
 	return rbxm
 end
 

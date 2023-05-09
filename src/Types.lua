@@ -39,7 +39,9 @@ export type Rbxm = {
 	InstanceRefs: {VirtualInstance},
 	Tree: {VirtualInstance},
 	Metadata: {[string]: string},
-	Strings: {string}
+	Strings: {string},
+
+	GetObjects: (Rbxm) -> {Instance}
 }
 
 return nil
