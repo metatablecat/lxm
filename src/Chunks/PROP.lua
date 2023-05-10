@@ -169,11 +169,8 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 			local rawOrientation = string.byte(buffer:read())
 			if rawOrientation > 0 then
 				local orientID = rawOrientation - 1
-				local x = GetEnumValFromNumber(Enum.NormalId, orientID / 6)
-				local y = GetEnumValFromNumber(Enum.NormalId, orientID % 6)
-				
-				local R0 = Vector3.fromNormalId(x)
-				local R1 = Vector3.fromNormalId(y)
+				local R0 = Vector3.fromNormalId(orientID / 6)
+				local R1 = Vector3.fromNormalId(orientID % 6)
 				local R2 =	R0:Cross(R1)
 
 				matricies[i] = {R0, R1, R2}
