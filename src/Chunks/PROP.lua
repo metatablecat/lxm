@@ -39,54 +39,54 @@ local function parseBitFlag<T>(byte: number, bitFlag: {T}): T
 end
 
 local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
-	local buffer = chunk.Data
-	local classID = buffer:readNumber("<I4")
+	local reader = chunk.Data
+	local classID = reader:readNumber("<I4")
 	local classref = rbxm.ClassRefs[classID]
 	local refs = classref.Refs
 	local sizeof = classref.Sizeof
 
-	local name = BasicTypes.String(buffer)
-	local optTypeIdCheck = string.byte(buffer:read(1, false)) == 0x1E
+	local name = BasicTypes.String(reader)
+	local optTypeIdCheck = string.byte(reader:read(1, false)) == 0x1E
 	if optTypeIdCheck then
 		-- although its only be spotted for CFrame, i do believe 0x1E will be used for
 		-- other optional types in the future, this future proofs that case
-		buffer:seek(1)
+		reader:seek(1)
 	end
 
-	local typeID = string.byte(buffer:read())
+	local typeID = string.byte(reader:read())
 
 	local properties = {}
 
-	if typeID == 0x01 or typeID == 0x1D then
+	if typeID == 0x01 then
 		-- String, Bytecode
 		for i = 1, sizeof do
-			properties[i] = BasicTypes.String(buffer)
+			properties[i] = BasicTypes.String(reader)
 		end
 
 	elseif typeID == 0x02 then
 		-- Boolean
 		for i = 1, sizeof do
-			properties[i] = buffer:read() ~= "\0"
+			properties[i] = reader:read() ~= "\0"
 		end
 
 	elseif typeID == 0x03 then
 		-- Int32
-		properties = BasicTypes.Int32Array(buffer, sizeof)
+		properties = BasicTypes.Int32Array(reader, sizeof)
 
 	elseif typeID == 0x04 then
 		-- RbxFloat32
-		properties = BasicTypes.RbxF32Array(buffer, sizeof)
+		properties = BasicTypes.RbxF32Array(reader, sizeof)
 
 	elseif typeID == 0x05 then
 		-- Float64
 		for i = 1, sizeof do
-			properties[i] = BasicTypes.Float64(buffer)
+			properties[i] = BasicTypes.Float64(reader)
 		end
 
 	elseif typeID == 0x06 then
 		-- UDim
-		local scale = BasicTypes.RbxF32Array(buffer, sizeof)
-		local offset = BasicTypes.Int32Array(buffer, sizeof)
+		local scale = BasicTypes.RbxF32Array(reader, sizeof)
+		local offset = BasicTypes.Int32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			properties[i] = UDim.new(scale[i], offset[i])
@@ -94,8 +94,8 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 	elseif typeID == 0x07 then
 		-- UDim2
-		local scaleX, scaleY = BasicTypes.RbxF32Array(buffer, sizeof), BasicTypes.RbxF32Array(buffer, sizeof)
-		local offsetX, offsetY = BasicTypes.Int32Array(buffer, sizeof), BasicTypes.Int32Array(buffer, sizeof)
+		local scaleX, scaleY = BasicTypes.RbxF32Array(reader, sizeof), BasicTypes.RbxF32Array(reader, sizeof)
+		local offsetX, offsetY = BasicTypes.Int32Array(reader, sizeof), BasicTypes.Int32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			properties[i] = UDim2.new(scaleX[i], offsetX[i], scaleY[i], offsetY[i])
@@ -106,14 +106,14 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		for i = 1, sizeof do
 			properties[i] = Ray.new(
 				Vector3.new(
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f")
+					reader:readNumber("<f"),
+					reader:readNumber("<f"),
+					reader:readNumber("<f")
 				),
 				Vector3.new(
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f")
+					reader:readNumber("<f"),
+					reader:readNumber("<f"),
+					reader:readNumber("<f")
 				)
 			)
 		end
@@ -121,29 +121,29 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 	elseif typeID == 0x09 then
 		-- Faces
 		for i = 1, sizeof do
-			local byte = string.byte(buffer:read())
+			local byte = string.byte(reader:read())
 			properties[i] = Faces.new(parseBitFlag(byte, FACES_BIT_FLAG))
 		end
 
 	elseif typeID == 0x0A then
 		-- Axes
 		for i = 1, sizeof do
-			local byte = string.byte(buffer:read())
+			local byte = string.byte(reader:read())
 			properties[i] = Axes.new(parseBitFlag(byte, AXES_BIT_FLAG))
 		end
 
 	elseif typeID == 0x0B then
 		-- BrickColor
-		local ints = BasicTypes.unsignedIntArray(buffer, sizeof)
+		local ints = BasicTypes.unsignedIntArray(reader, sizeof)
 		for i = 1, sizeof do
 			properties[i] = BrickColor.new(ints[i])
 		end
 
 	elseif typeID == 0x0C then
 		-- Color3
-		local r = BasicTypes.RbxF32Array(buffer, sizeof)
-		local g = BasicTypes.RbxF32Array(buffer, sizeof)
-		local b = BasicTypes.RbxF32Array(buffer, sizeof)
+		local r = BasicTypes.RbxF32Array(reader, sizeof)
+		local g = BasicTypes.RbxF32Array(reader, sizeof)
+		local b = BasicTypes.RbxF32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			properties[i] = Color3.new(r[i], g[i], b[i])
@@ -151,8 +151,8 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 	elseif typeID == 0x0D then
 		-- Vector2
-		local x = BasicTypes.RbxF32Array(buffer, sizeof)
-		local y = BasicTypes.RbxF32Array(buffer, sizeof)
+		local x = BasicTypes.RbxF32Array(reader, sizeof)
+		local y = BasicTypes.RbxF32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			properties[i] = Vector2.new(x[i], y[i])
@@ -160,9 +160,9 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 	elseif typeID == 0x0E then
 		-- Vector3
-		local x = BasicTypes.RbxF32Array(buffer, sizeof)
-		local y = BasicTypes.RbxF32Array(buffer, sizeof)
-		local z = BasicTypes.RbxF32Array(buffer, sizeof)
+		local x = BasicTypes.RbxF32Array(reader, sizeof)
+		local y = BasicTypes.RbxF32Array(reader, sizeof)
+		local z = BasicTypes.RbxF32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			properties[i] = Vector3.new(x[i], y[i], z[i])
@@ -176,7 +176,7 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		local matricies = table.create(sizeof)
 
 		for i = 1, sizeof do
-			local rawOrientation = string.byte(buffer:read())
+			local rawOrientation = string.byte(reader:read())
 			if rawOrientation > 0 then
 				local orientID = rawOrientation - 1
 				local R0 = Vector3.fromNormalId(orientID / 6)
@@ -186,17 +186,17 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 				matricies[i] = {R0, R1, R2}
 			else
 				local r00, r01, r02 = 
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f")
+					reader:readNumber("<f"),
+					reader:readNumber("<f"),
+					reader:readNumber("<f")
 				local r10, r11, r12 = 
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f")
+					reader:readNumber("<f"),
+					reader:readNumber("<f"),
+					reader:readNumber("<f")
 				local r20, r21, r22 = 
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f")
+					reader:readNumber("<f"),
+					reader:readNumber("<f"),
+					reader:readNumber("<f")
 
 				matricies[i] = {
 					Vector3.new(r00, r10, r20),
@@ -207,9 +207,9 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		end
 
 		-- map interleaved position
-		local cfX = BasicTypes.RbxF32Array(buffer, sizeof)
-		local cfY = BasicTypes.RbxF32Array(buffer, sizeof)
-		local cfZ = BasicTypes.RbxF32Array(buffer, sizeof)
+		local cfX = BasicTypes.RbxF32Array(reader, sizeof)
+		local cfY = BasicTypes.RbxF32Array(reader, sizeof)
+		local cfZ = BasicTypes.RbxF32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			local thisMatrix = matricies[i]
@@ -222,16 +222,16 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		local quaternions = {}
 		for i = 1, sizeof do
 			quaternions[i] = {
-				x = buffer:readNumber("<f"),
-				y = buffer:readNumber("<f"),
-				z = buffer:readNumber("<f"),
-				w = buffer:readNumber("<f")
+				x = reader:readNumber("<f"),
+				y = reader:readNumber("<f"),
+				z = reader:readNumber("<f"),
+				w = reader:readNumber("<f")
 			}
 		end
 
-		local cfX = BasicTypes.RbxF32Array(buffer, sizeof)
-		local cfY = BasicTypes.RbxF32Array(buffer, sizeof)
-		local cfZ = BasicTypes.RbxF32Array(buffer, sizeof)
+		local cfX = BasicTypes.RbxF32Array(reader, sizeof)
+		local cfY = BasicTypes.RbxF32Array(reader, sizeof)
+		local cfZ = BasicTypes.RbxF32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			local q = quaternions[i]
@@ -240,33 +240,33 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 	elseif typeID == 0x12 then
 		-- Enum
-		properties = BasicTypes.unsignedIntArray(buffer, sizeof)
+		properties = BasicTypes.unsignedIntArray(reader, sizeof)
 
 	elseif typeID == 0x13 then
 		-- Ref
-		properties = BasicTypes.RefArray(buffer, sizeof)
+		properties = BasicTypes.RefArray(reader, sizeof)
 
 	elseif typeID == 0x14 then
 		-- Vector3int16
 		for i = 1, sizeof do
 			properties[i] = Vector3int16.new(
-				buffer:readNumber("<i2"),
-				buffer:readNumber("<i2"),
-				buffer:readNumber("<i2")
+				reader:readNumber("<i2"),
+				reader:readNumber("<i2"),
+				reader:readNumber("<i2")
 			)
 		end
 
 	elseif typeID == 0x15 then
 		-- NumberSequence
 		for i = 1, sizeof do
-			local kpCount = buffer:readNumber("<I4")
+			local kpCount = reader:readNumber("<I4")
 			local kp = table.create(kpCount)
 
 			for i = 1, kp do
 				table.insert(kp, NumberSequenceKeypoint.new(
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f"),
-					buffer:readNumber("<f")
+					reader:readNumber("<f"),
+					reader:readNumber("<f"),
+					reader:readNumber("<f")
 				))
 			end
 
@@ -276,20 +276,20 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 	elseif typeID == 0x16 then
 		-- ColorSequence
 		for i = 1, sizeof do
-			local kpCount = buffer:readNumber("<I4")
+			local kpCount = reader:readNumber("<I4")
 			local kp = table.create(kpCount)
 
 			for i = 1, kp do
 				table.insert(kp, ColorSequenceKeypoint.new(
-					buffer:readNumber("<f"),
+					reader:readNumber("<f"),
 					Color3.new(
-						buffer:readNumber("<f"),
-						buffer:readNumber("<f"),
-						buffer:readNumber("<f")
+						reader:readNumber("<f"),
+						reader:readNumber("<f"),
+						reader:readNumber("<f")
 					)
 				))
 
-				buffer:readNumber("<f")
+				reader:readNumber("<f")
 			end
 
 			properties[i] = ColorSequence.new(kp)
@@ -299,15 +299,15 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		-- NumberRange
 		for i = 1, sizeof do
 			properties[i] = NumberRange.new(
-				buffer:readNumber("<f"),
-				buffer:readNumber("<f")
+				reader:readNumber("<f"),
+				reader:readNumber("<f")
 			)
 		end
 
 	elseif typeID == 0x18 then
 		-- Rect
-		local xmn, ymn = BasicTypes.RbxF32Array(buffer, sizeof), BasicTypes.RbxF32Array(buffer, sizeof)
-		local xmx, ymx = BasicTypes.RbxF32Array(buffer, sizeof), BasicTypes.RbxF32Array(buffer, sizeof)
+		local xmn, ymn = BasicTypes.RbxF32Array(reader, sizeof), BasicTypes.RbxF32Array(reader, sizeof)
+		local xmx, ymx = BasicTypes.RbxF32Array(reader, sizeof), BasicTypes.RbxF32Array(reader, sizeof)
 
 		for i = 1, sizeof do
 			properties[i] = Rect.new(
@@ -323,22 +323,22 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 	elseif typeID == 0x19 then
 		-- PhysicalProperties
 		for i = 1, sizeof do
-			if buffer:read() == "\0" then continue end
+			if reader:read() == "\0" then continue end
 
 			properties[i] = PhysicalProperties.new(
-				buffer:readNumber("<f"),
-				buffer:readNumber("<f"),
-				buffer:readNumber("<f"),
-				buffer:readNumber("<f"),
-				buffer:readNumber("<f")
+				reader:readNumber("<f"),
+				reader:readNumber("<f"),
+				reader:readNumber("<f"),
+				reader:readNumber("<f"),
+				reader:readNumber("<f")
 			)
 		end
 
 	elseif typeID == 0x1A then
 		-- Color3int8
-		local r = string.split(buffer:read(sizeof), "")
-		local g = string.split(buffer:read(sizeof), "")
-		local b = string.split(buffer:read(sizeof), "")
+		local r = string.split(reader:read(sizeof), "")
+		local g = string.split(reader:read(sizeof), "")
+		local b = string.split(reader:read(sizeof), "")
 
 		for i = 1, sizeof do
 			properties[i] = Color3.fromRGB(
@@ -350,24 +350,30 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 	elseif typeID == 0x1B then
 		-- Int64
-		properties = BasicTypes.Int64Array(buffer, sizeof)
+		properties = BasicTypes.Int64Array(reader, sizeof)
 
 	elseif typeID == 0x1C then
 		-- SharedString
-		local strings = BasicTypes.unsignedIntArray(buffer, sizeof)
+		local strings = BasicTypes.unsignedIntArray(reader, sizeof)
 		for i = 1, sizeof do
 			local ref = strings[i] + 1
 			properties[i] = rbxm.Strings[ref]
 		end
 
+	elseif typeID == 0x1D then
+		-- Bytecode
+		for i = 1, sizeof do
+			properties[i] = buffer.fromstring(BasicTypes.String(reader))
+		end
+
 	elseif typeID == 0x20 then
 		-- Font
 		for i = 1, sizeof do
-			local family = BasicTypes.String(buffer)
-			local weight = GetEnumValFromNumber(Enum.FontWeight, buffer:readNumber("<I2"))
-			local style = GetEnumValFromNumber(Enum.FontStyle, string.byte(buffer:read()))
+			local family = BasicTypes.String(reader)
+			local weight = GetEnumValFromNumber(Enum.FontWeight, reader:readNumber("<I2"))
+			local style = GetEnumValFromNumber(Enum.FontStyle, string.byte(reader:read()))
 			
-			BasicTypes.String(buffer) --CachedFaceId
+			BasicTypes.String(reader) --CachedFaceId
 
 			properties[i] = Font.new(family, weight, style)
 		end
@@ -375,10 +381,10 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 
 	-- perform optional prop handle
 	if optTypeIdCheck then
-		buffer:read()
+		reader:read()
 
 		for i = 1, sizeof do
-			local archivable = buffer:read() ~= "\0"
+			local archivable = reader:read() ~= "\0"
 			if not archivable then
 				-- null the key (hopefully if OptCFrame returns, it allows null as a prop)
 				properties[i] = nil
