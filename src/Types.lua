@@ -10,7 +10,8 @@ export type Buffer = {
 	readNumber: (Buffer, packfmt: string?, shift: boolean?) -> number,
 	seek: (Buffer, len: number) -> (),
 	append: (Buffer, newData: string) -> (),
-	toEnd: (Buffer) -> ()
+	toEnd: (Buffer) -> (),
+	readByte: (Buffer, shift: boolean?) -> number
 }
 
 export type Chunk = {

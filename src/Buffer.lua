@@ -56,6 +56,10 @@ local function Buffer(str, allowOverflows): Types.Buffer
 		return n
 	end
 
+	function Stream.readByte(self: Types.Buffer, shift: boolean?): number
+		return string.byte(self:read(1, shift))
+	end
+
 	return Stream
 end
 

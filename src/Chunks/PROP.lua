@@ -1,8 +1,19 @@
 local Types = require(script.Parent.Parent.Types)
 local BasicTypes = require(script.Parent.Parent.BasicTypes)
 
-local FACES_BIT_FLAG = {}
-local AXES_BIT_FLAG = {}
+local FACES_BIT_FLAG = {
+	Enum.NormalId.Right,
+	Enum.NormalId.Top,
+	Enum.NormalId.Back,
+	Enum.NormalId.Left,
+	Enum.NormalId.Bottom,
+	Enum.NormalId.Front
+}
+local AXES_BIT_FLAG = {
+	Enum.Axis.X,
+	Enum.Axis.Y,
+	Enum.Axis.Z
+}
 
 local function GetEnumValFromNumber(enum: Enum, num: number): EnumItem
 	local enums = enum:GetEnumItems()
@@ -19,9 +30,8 @@ end
 local function parseBitFlag<T>(byte: number, bitFlag: {T}): T
 	local output = {}
 	for i = 0, 7 do
-		local bit = 2^i
-		if bit32.extract(byte, bit) then
-			table.insert(output, bitFlag[bit])
+		if bit32.extract(byte, i) ~= 0 then
+			table.insert(output, bitFlag[i+1])
 		end
 	end
 
@@ -112,14 +122,14 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 		-- Faces
 		for i = 1, sizeof do
 			local byte = string.byte(buffer:read())
-			properties[i] = parseBitFlag(byte, FACES_BIT_FLAG)
+			properties[i] = Faces.new(parseBitFlag(byte, FACES_BIT_FLAG))
 		end
 
 	elseif typeID == 0x0A then
 		-- Axes
 		for i = 1, sizeof do
 			local byte = string.byte(buffer:read())
-			properties[i] = parseBitFlag(byte, AXES_BIT_FLAG)
+			properties[i] = Axes.new(parseBitFlag(byte, AXES_BIT_FLAG))
 		end
 
 	elseif typeID == 0x0B then

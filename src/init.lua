@@ -19,6 +19,7 @@ local ZSTD_HEADER = "\x28\xB5\x2F\xFD"
 local Buffer = require(script.Buffer)
 local Types = require(script.Types)
 local lz4 = require(script.lz4)
+local zstd = require(script.zstd)
 local Chunks = script.Chunks
 
 local VALID_CHUNK_IDENTIFIERS = {
@@ -44,7 +45,9 @@ local function Chunk(buffer: Types.Buffer, chunkIndex: number): Types.Chunk
 	local chunk = {}
 	chunk.InternalID = chunkIndex
 	chunk.Header = buffer:read(4)
+
 	if not VALID_CHUNK_IDENTIFIERS[chunk.Header] then
+		print(string.byte(chunk.Header, 1, 4))
 		error(`Invalid chunk identifier {chunk.Header} on chunk id {chunkIndex}`)
 	end
 
@@ -62,12 +65,14 @@ local function Chunk(buffer: Types.Buffer, chunkIndex: number): Types.Chunk
 	end
 
 	if compressed == 0 then
-		data = buffer:read(decompressed)
+		data = buffer:read(decompressed + 12)
 	else
 		if zstd_check == ZSTD_HEADER then
-			error(`Chunk id {chunkIndex} of identifier {chunk.Header} is a ZSTD compressed chunk and cannot be decompressed`)
+			buffer:seek(12)
+			data = zstd(buffer:read(compressed))
+		else
+			data = lz4(buffer:read(compressed + 12))
 		end
-		data = lz4(buffer:read(compressed + 12))
 	end
 
 	chunk.Data = Buffer(data, false)
