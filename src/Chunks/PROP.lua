@@ -262,7 +262,7 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 			local kpCount = reader:readNumber("<I4")
 			local kp = table.create(kpCount)
 
-			for i = 1, kp do
+			for i = 1, kpCount do
 				table.insert(kp, NumberSequenceKeypoint.new(
 					reader:readNumber("<f"),
 					reader:readNumber("<f"),
@@ -279,7 +279,7 @@ local function PROP(chunk: Types.Chunk, rbxm: Types.Rbxm)
 			local kpCount = reader:readNumber("<I4")
 			local kp = table.create(kpCount)
 
-			for i = 1, kp do
+			for i = 1, kpCount do
 				table.insert(kp, ColorSequenceKeypoint.new(
 					reader:readNumber("<f"),
 					Color3.new(
